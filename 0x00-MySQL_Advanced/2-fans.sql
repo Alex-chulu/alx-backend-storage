@@ -5,6 +5,6 @@
 -- of non-unique fans.
 -- Database: Any
 
-SELECT origin, SUM(nb_fans) AS total_fans
+SELECT origin, SUM(fans) AS total_fans
 FROM metal_bands
 GROUP BY origin ORDER BY total_fans DESC;
