@@ -6,11 +6,12 @@
 
 DELIMITER //
 
+DROP PROCEDURE IF EXISTS ComputeAverageWeightedScoreForUser;
 CREATE PROCEDURE ComputeAverageWeightedScoreForUser (
   IN user_id INT
 )
 BEGIN
-  DECLARE average_weighted_score DECIMAL(10,2);
+  DECLARE average_weighted_score INT DEFAULT 0;
   
   -- Compute average weighted score
   SELECT SUM(score * weight) / SUM(weight) INTO average_weighted_score
