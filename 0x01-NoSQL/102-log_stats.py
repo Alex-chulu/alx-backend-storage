@@ -5,7 +5,10 @@ Module: 12-log_stats
 Description: Script to provide statistics about Nginx logs stored in MongoDB
 """
 
+
+import pymongo
 from pymongo import MongoClient
+
 
 def get_nginx_logs_stats():
     """
