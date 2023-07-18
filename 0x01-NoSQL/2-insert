@@ -1,0 +1,2 @@
+//a script that inserts a document in the collection school
+mongo.school.insertOne({"name": "Holberton school"})
