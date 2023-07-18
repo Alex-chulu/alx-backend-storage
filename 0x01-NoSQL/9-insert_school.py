@@ -26,3 +26,4 @@ if __name__ == "__main__":
     document_data = {"name": "Holberton School", "location": "San Francisco"}
     new_id = insert_school(my_collection, **document_data)
     print(new_id)
+
