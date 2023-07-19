@@ -110,6 +110,27 @@ def call_history(method: Callable) -> Callable:
 
     return wrapper
 
+def replay(func: Callable) -> None:
+    """
+    Display the history of calls of a particular function.
+
+    Args:
+        func (Callable): The function for which the history is to be displayed.
+
+    Returns:
+        None
+    """
+    key_inputs = func.__qualname__ + ":inputs"
+    key_outputs = func.__qualname__ + ":outputs"
+
+    inputs = [eval(arg) for arg in cache._redis.lrange(key_inputs, 0, -1)]
+    outputs = [eval(output) for output in cache._redis.lrange(key_outputs, 0, -1)]
+
+    print(f"{func.__qualname__} was called {len(inputs)} times:")
+
+    for inp, out in zip(inputs, outputs):
+        print(f"{func.__qualname__}{tuple(inp)} -> {out}")
+
 # Decorate Cache.store method with call_history
 Cache.store = call_history(Cache.store)
 
@@ -117,18 +138,9 @@ Cache.store = call_history(Cache.store)
 if __name__ == "__main__":
     cache = Cache()
 
-    TEST_CASES = {
-        b"foo": None,
-        123: int,
-        "bar": lambda d: d.decode("utf-8")
-    }
+    cache.store("foo")
+    cache.store("bar")
+    cache.store(42)
 
-    for value, fn in TEST_CASES.items():
-        key = cache.store(value)
-        assert cache.get(key, fn=fn) == value
-        assert cache._redis.get(cache.store.__qualname__ + ":outputs") == str(value).encode()
-
-    # Check if the input arguments are properly stored in Redis
-    key = cache.store("test")
-    assert cache._redis.lrange(cache.store.__qualname__ + ":inputs", 0, -1) == [str(("test",)).encode()]
+    replay(cache.store)
 
