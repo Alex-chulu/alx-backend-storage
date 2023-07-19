@@ -86,25 +86,32 @@ class Cache:
         """
         return self.get(key, fn=int)
 
-def count_calls(method: Callable) -> Callable:
+def call_history(method: Callable) -> Callable:
     """
-    Decorator to count how many times a method is called.
+    Decorator to store the history of inputs and outputs for a particular function.
 
     Args:
         method (Callable): The method to be decorated.
 
     Returns:
-        Callable: The wrapped method that increments the call count in Redis and returns the original method's result.
+        Callable: The wrapped method that stores the history in Redis and returns the output of the original method.
     """
     @functools.wraps(method)
     def wrapper(self, *args, **kwargs):
-        key = method.__qualname__
-        self._redis.incr(key)
-        return method(self, *args, **kwargs)
+        key_inputs = method.__qualname__ + ":inputs"
+        key_outputs = method.__qualname__ + ":outputs"
+
+        self._redis.rpush(key_inputs, str(args))
+
+        output = method(self, *args, **kwargs)
+
+        self._redis.rpush(key_outputs, str(output))
+        return output
+
     return wrapper
 
-# Decorate Cache.store method with count_calls
-Cache.store = count_calls(Cache.store)
+# Decorate Cache.store method with call_history
+Cache.store = call_history(Cache.store)
 
 # Example usage:
 if __name__ == "__main__":
@@ -119,10 +126,9 @@ if __name__ == "__main__":
     for value, fn in TEST_CASES.items():
         key = cache.store(value)
         assert cache.get(key, fn=fn) == value
-        assert cache._redis.get(cache.store.__qualname__).decode() == "1"
+        assert cache._redis.get(cache.store.__qualname__ + ":outputs") == str(value).encode()
 
-    # Check if the call count is properly incremented
-    for i in range(5):
-        key = cache.store("test")
-    assert cache._redis.get(cache.store.__qualname__).decode() == "6"
+    # Check if the input arguments are properly stored in Redis
+    key = cache.store("test")
+    assert cache._redis.lrange(cache.store.__qualname__ + ":inputs", 0, -1) == [str(("test",)).encode()]
 
