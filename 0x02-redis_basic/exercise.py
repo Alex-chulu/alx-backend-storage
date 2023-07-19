@@ -7,6 +7,7 @@ Description: A simple Cache class to store data in Redis and retrieve with optio
 
 import redis
 import uuid
+import functools
 from typing import Union, Callable
 
 class Cache:
@@ -85,6 +86,26 @@ class Cache:
         """
         return self.get(key, fn=int)
 
+def count_calls(method: Callable) -> Callable:
+    """
+    Decorator to count how many times a method is called.
+
+    Args:
+        method (Callable): The method to be decorated.
+
+    Returns:
+        Callable: The wrapped method that increments the call count in Redis and returns the original method's result.
+    """
+    @functools.wraps(method)
+    def wrapper(self, *args, **kwargs):
+        key = method.__qualname__
+        self._redis.incr(key)
+        return method(self, *args, **kwargs)
+    return wrapper
+
+# Decorate Cache.store method with count_calls
+Cache.store = count_calls(Cache.store)
+
 # Example usage:
 if __name__ == "__main__":
     cache = Cache()
@@ -98,4 +119,10 @@ if __name__ == "__main__":
     for value, fn in TEST_CASES.items():
         key = cache.store(value)
         assert cache.get(key, fn=fn) == value
+        assert cache._redis.get(cache.store.__qualname__).decode() == "1"
+
+    # Check if the call count is properly incremented
+    for i in range(5):
+        key = cache.store("test")
+    assert cache._redis.get(cache.store.__qualname__).decode() == "6"
 
