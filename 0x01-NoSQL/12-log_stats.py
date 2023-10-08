@@ -1,45 +1,30 @@
 #!/usr/bin/env python3
+"""Script to provide stats about Nginx logs stored in MongoDB."""
 
-"""
-Module: nginx_logs_stats
-Description: Script to provide statistics about Nginx logs stored in MongoDB
-"""
+import pymongo
 
-from pymongo import MongoClient
+def print_stats(collection):
+    """Print statistics about Nginx logs."""
+    total_logs = collection.count_documents({})
 
-def get_nginx_logs_stats():
-    """
-    Retrieves and displays statistics about Nginx logs stored in MongoDB.
+    print(f"{total_logs} logs")
 
-    Returns:
-        None
-    """
-    # Connect to MongoDB
-    client = MongoClient()
+    methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
+    print("Methods:")
+    for method in methods:
+        method_count = collection.count_documents({"method": method})
+        print(f"    method {method}: {method_count}")
+
+    status_check_count = collection.count_documents({
+        "method": "GET",
+        "path": "/status"
+    })
+    print(f"{status_check_count} status check")
+
+if __name__ == "__main__":
+    client = pymongo.MongoClient("mongodb://localhost:27017/")
     db = client.logs
     collection = db.nginx
 
-    # Get the number of documents in the collection
-    num_logs = collection.count_documents({})
-
-    # Display the total number of logs
-    print(f"{num_logs} logs where {num_logs} is the number of documents in this collection")
-
-    # Get the count of different HTTP methods
-    http_methods = ["GET", "POST", "PUT", "PATCH", "DELETE"]
-    methods_stats = [collection.count_documents({"method": method}) for method in http_methods]
-
-    # Display the count of each HTTP method
-    print("Methods:")
-    for method, count in zip(http_methods, methods_stats):
-        print(f"\t{count} documents with method={method}")
-
-    # Get the count of logs with specific method and path
-    specific_logs_count = collection.count_documents({"method": "GET", "path": "/status"})
-
-    # Display the count of logs with specific method and path
-    print(f"1 document with method=GET, path=/status")
-
-if __name__ == "__main__":
-    get_nginx_logs_stats()
+    print_stats(collection)
 
